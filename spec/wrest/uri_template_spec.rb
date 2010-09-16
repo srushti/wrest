@@ -34,5 +34,27 @@ module Wrest
         :id => '1'
       ).should == "http://kaiwren:fupuppies@coathangers.com/portal/1".to_uri
     end
+
+    describe 'equals' do
+      it "should have the same uri_pattern " do
+        UriTemplate.new("http://localhost:3000/:resource/:id.:format").should_not ==  UriTemplate.new("http://localhost:3000/:id/:resource.:format")
+        UriTemplate.new("http://localhost:3000/:resource/:id.:format").should ==  UriTemplate.new("http://localhost:3000/:resource/:id.:format")
+      end
+    end
+    
+    context 'extension' do
+      it "should know how to build a new UriTemplate from an existing one by appending a path" do
+        UriTemplate.new('http://localhost:3000')['/ooga/booga'].should == UriTemplate.new('http://localhost:3000/ooga/booga')
+      end
+      
+      it "should handle / positions with wisdom" do
+        UriTemplate.new('http://localhost:3000/')['/ooga/booga'].should == UriTemplate.new('http://localhost:3000/ooga/booga')
+        UriTemplate.new('http://localhost:3000')['/ooga/booga'].should == UriTemplate.new('http://localhost:3000/ooga/booga')
+        UriTemplate.new('http://localhost:3000/')['ooga/booga'].should == UriTemplate.new('http://localhost:3000/ooga/booga')
+        UriTemplate.new('http://localhost:3000')['ooga/booga'].should == UriTemplate.new('http://localhost:3000/ooga/booga')
+      end
+    end
+    
+
   end
 end

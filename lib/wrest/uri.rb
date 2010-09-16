@@ -22,17 +22,26 @@ module Wrest #:nodoc:
   #
   # You can find examples that use real APIs (like delicious) under the wrest/examples directory.
   class Uri
-    attr_reader :uri, :username, :password, :uri_string
+    attr_reader :uri, :username, :password, :uri_string, :uri_path, :query
         
     # See Wrest::Http::Request for the available options and their default values.
     def initialize(uri_string, options = {})
-      @options = options
-      @uri_string = uri_string.clone
-      @uri = URI.parse(uri_string)
-      @username = (@options[:username] ||= @uri.user)
-      @password = (@options[:password] ||= @uri.password)
-    end
+        @options = options
+        @uri_string = uri_string.to_s
+        @uri = URI.parse(@uri_string)
+        uri_scheme = URI.split(@uri_string)
+        @uri_path = uri_scheme[-4].split('?').first || ''
+        @uri_path = (@uri_path.empty? ? '/' : @uri_path) 
+        @query = uri_scheme[-2] || ''
+        @username = (@options[:username] ||= @uri.user)
+        @password = (@options[:password] ||= @uri.password)
+    end 
     
+    def to_template(pattern)
+      template_pattern = URI.join(uri_string,pattern).to_s
+      UriTemplate.new(template_pattern)
+    end
+        
     # Build a new Wrest::Uri by appending _path_ to
     # the current uri. If the original Wrest::Uri
     # has a username and password, that will be
@@ -49,7 +58,7 @@ module Wrest #:nodoc:
     #  uri = "https://localhost:3000/v1".to_uri(:username => 'foo', :password => 'bar')
     #  uri['/oogas/1', {:username => 'meh', :password => 'baz'}].get
     def [](path, options = nil)
-      Uri.new(@uri_string+path, options || @options)
+      Uri.new(URI.join(uri_string, path), options || @options)
     end
     
     # Clones a Uri, building a new instance with exactly the same uri string.
@@ -130,10 +139,10 @@ module Wrest #:nodoc:
       Http::Options.new(self, @options).invoke
     end
 
-    def https?
+    def https? 
       @uri.is_a?(URI::HTTPS)
     end
-    
+
     # Provides the full path of a request.
     # For example, for
     #  http://localhost:3000/demons/1/chi?sort=true
@@ -142,7 +151,7 @@ module Wrest #:nodoc:
     def full_path
       uri.request_uri
     end
-    
+
     def protocol
       uri.scheme
     end

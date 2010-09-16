@@ -15,24 +15,25 @@ Gem::Specification.new do |s|
   s.required_rubygems_version = ">= 1.3.7"
   s.rubyforge_project = "wrest"
   
-  s.add_development_dependency "rspec", ["= 2.0.0.beta19"]
-  s.add_runtime_dependency "activesupport", [">= 3.0.0"]
   s.requirements << "To use multipart post, install the 'multipart-post' gem."
   s.requirements << "To use curl as the http engine, install the 'patron' gem. This feature is not available (and should be unneccessary) on jruby."
   
-  s.files             = Dir.glob("{bin,lib}/**/*") + %w(README.rdoc CHANGELOG LICENCE)
+  s.files             = Dir.glob("{bin/**/*,lib/**/*.rb}") + %w(README.rdoc CHANGELOG LICENCE)
   s.extra_rdoc_files  = ["README.rdoc"]
   s.rdoc_options      = ["--charset=UTF-8"]
   s.executables       = ['wrest']
   s.require_path      = 'lib'
-  
+
+  s.add_development_dependency "rspec", ["~> 2.0.0.beta.22"]
+  s.add_runtime_dependency "activesupport", ["~> 3.0.0"]  
+  s.add_runtime_dependency "builder", ["~> 2.1.2"]  
   case RUBY_PLATFORM
   when /java/
-    s.add_runtime_dependency("json-jruby", [">= 1.4.3.1"])
-    s.add_runtime_dependency("nokogiri", [">= 1.4.3.1"])
+    s.add_runtime_dependency("json-jruby", ["~> 1.4.3.1"])
+    s.add_runtime_dependency("nokogiri", ["~> 1.4.3.1"])
     s.platform    = Gem::Platform::CURRENT
   else
-    s.add_runtime_dependency "json", [">= 1.4.6"]
+    s.add_runtime_dependency "json", ["~> 1.4.6"]
   end
 end
  
