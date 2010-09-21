@@ -18,7 +18,7 @@ else
   require 'rake'
   require 'rspec'
   require 'rspec/core/rake_task'
-
+  
   begin
     require 'metric_fu'
   rescue LoadError
@@ -76,7 +76,7 @@ begin
   require 'rcov/rcovtask'
   desc "Run all specs in spec directory with RCov"
   RSpec::Core::RakeTask.new(:rcov) do |t|
-    t.spec_opts = ['--options', "spec/spec.opts"]
+    t.rspec_opts = ['--options', "spec/spec.opts"]
     t.pattern = "spec/unit/wrest/**/*_spec.rb"
     t.rcov = true
     t.rcov_opts = lambda do

@@ -1,4 +1,4 @@
-= Wrest 1.0.0.beta3
+= Wrest 1.0.0.beta5
 
 (c) Copyright 2009-2010 {Sidu Ponnappa}[http://blog.sidu.in]. All Rights Reserved.
 
@@ -17,55 +17,60 @@ To receive notifications whenever new features are added to Wrest, please subscr
 
 For Facebook, Twitter, Delicious, GitHub and other API examples, see http://github.com/kaiwren/wrest/tree/master/examples
 
-== Installation
-
-The source is available at git://github.com/kaiwren/wrest.git
-
-To install the Wrest gem, do <tt>(sudo) gem install wrest --pre</tt>.
-
-Wrest is currently available as a gem for for Ruby and JRuby.
-
-=== Shell
-
-You can launch the interactive Wrest shell by running bin/wrest if you have the source or invoking <tt>wrest</tt> from your prompt if you've installed the gem.
-  $ wrest
-  >> y 'http://twitter.com/statuses/public_timeline.json'.to_uri(:timeout => 5).get.deserialise
-
-=== Library
-
-  require 'rubygems'
-  require 'wrest'
-  y "http://search.yahooapis.com/NewsSearchService/V1/newsSearch".to_uri.get(
-                  :appid  => 'YahooDemo', 
-                  :output => 'xml',
-                  :query  => 'India',
-                  :results=> '3',
-                  :start  => '1'
-                )
 === Basic Http Calls
 
 ==== GET
 
-A couple of ways to get Yahoo news as a hash map. 
+* Basic API calls
+  
+    'http://twitter.com/statuses/public_timeline.json'.to_uri.get.deserialise  # works with json and xml out of the box
 
-* This example simply does a get on a uri and figures out the appropriate deserialiser using the content-type (in this case 'text/javascript', which uses Wrest::Translators::Json). See content_types.rb under lib/wrest/mappers/translators.
- "http://search.yahooapis.com/NewsSearchService/V1/newsSearch?appid=YahooDemo&output=json&query=India&results=3&start=1".to_uri.get.deserialise
-
-* This example does a get on a base uri with several parameters passed to it, resulting in a uri essentially the same as the one above. It also shows how you can specify a custom deserialiser to produce a hash-map from the response, as well as a hash mutator to clean up the deserialised hash.
- require 'rubygems'
- require 'wrest'
- include Wrest::Components
- y "http://search.yahooapis.com/NewsSearchService/V1/newsSearch".to_uri.get(
+    'http://twitter.com/statuses/public_timeline.xml'.to_uri.get.deserialise   # see lib/wrest/components/translators to add other formats
+* Timeout support
+  
+    'http://twitter.com/statuses/public_timeline.json'.to_uri.get(:timeout => 5).body
+* Redirect support
+  
+    'http://google.com'.to_uri(:follow_redirects => false).get
+  
+    'http://google.com'.to_uri(:follow_redirects_limit => 1).get
+* More complex request with parameters and a custom deserialiser
+  
+    'http://search.yahooapis.com/NewsSearchService/V1/newsSearch'.to_uri.get(
                   :appid  => 'YahooDemo', 
                   :output => 'xml',
                   :query  => 'India',
                   :results=> '3',
                   :start  => '1'
                 ).deserialise_using(
-                  Translators::Xml
-                ).mutate_using(
-                  Mutators::XmlMiniTypeCaster.new
+                  Wrest::Translators::Xml
                 )
+* Basic HTTP auth and URI extensions using Wrest::Uri#[]
+  
+    base_uri = 'https://api.del.icio.us/v1'.to_uri(:username => 'kaiwren', :password => 'fupupp1es')
+    bookmarks = base_uri['/posts/get'].get.deserialise
+
+==== POST
+
+* Regular, vanilla Post with a body and headers
+  
+    'http://my.api.com'.to_uri.post('YAML encoded body', 'Content-Type' => 'text/x-yaml')  
+* Form encoded post
+    
+    'https://api.del.icio.us/v1/posts/add'.to_uri(
+             :username => 'kaiwren', :password => 'fupupp1es'
+          ).post_form(
+             :url => 'http://blog.sidu.in/search/label/ruby',
+             :description => 'The Ruby related posts on my blog!',
+             :extended => "All posts tagged with 'ruby'",
+             :tags => 'ruby hacking'
+          )
+* Multipart posts
+   
+   'http://imgur.com/api/upload.xml'.to_uri.post_multipart(
+     :image => UploadIO.new(File.open(file_path), "image/png", file_path), 
+     :key => imgur_key
+    ).deserialise
 
 ==== DELETE
 
@@ -125,3 +130,27 @@ Wrest RDocs can be found at http://wrest.rubyforge.org
 == Roadmap
 
 Features that are planned, in progress or already implemented are documented in the {CHANGELOG}[http://github.com/kaiwren/wrest/tree/master/CHANGELOG] starting from version 0.0.8.
+
+== Installation
+
+The source is available at git://github.com/kaiwren/wrest.git
+
+To install the Wrest gem, do <tt>(sudo) gem install wrest --pre</tt>.
+
+Wrest is currently available as a gem for for Ruby and JRuby.
+
+=== Shell
+
+You can launch the interactive Wrest shell by running bin/wrest if you have the source or invoking <tt>wrest</tt> from your prompt if you've installed the gem.
+  $ wrest
+  >> y 'http://twitter.com/statuses/public_timeline.json'.to_uri(:timeout => 5).get.deserialise
+  
+== Contributors
+ 
+* Sidu Ponnappa : {kaiwren}[http://github.com/kaiwren]
+* Niranjan Paranjape : {achamian}[http://github.com/achamian]
+* Aakash Dharmadhkari : {aakashd}[http://github.com/aakashd]
+* Srushti : {srushti}[http://github.com/srushti]
+* Preethi Ramdev : {preethiramdev}[http://github.com/preethiramdev]
+* Nikhil Vallishayee : {nikhilvallishayee}[http://github.com/nikhilvallishayee]
+* Jacques Crocker : {railsjedi}[http://github.com/railsjedi]
