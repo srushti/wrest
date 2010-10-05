@@ -6,14 +6,17 @@
 # Unless required by applicable law or agreed to in writing, software distributed under the License
 # is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and limitations under the License.
-
 module Wrest
   module Components::Translators
     module Xml
       extend self
 
-      def deserialise(response)
-        Hash.from_xml(response.body)
+      def deserialise(response,options={})
+        if(!options[:xpath].nil?)
+          ActiveSupport::XmlMini.filter(response.body,options[:xpath])
+        else
+          Hash.from_xml(response.body)
+        end
       end
 
       def serialise(hash, options = {})

@@ -26,7 +26,7 @@ module Wrest
     it "should know how to delegate to a translator" do
       http_response = mock('response')
       http_response.stub!(:code).and_return('200')
-      Components::Translators::Xml.should_receive(:deserialise).with(http_response)
+      Components::Translators::Xml.should_receive(:deserialise).with(http_response,{})
       Native::Response.new(http_response).deserialise_using(Components::Translators::Xml)
     end
 
@@ -36,12 +36,30 @@ module Wrest
       http_response.should_receive(:content_type).and_return('application/xml')
 
       response = Native::Response.new(http_response)
-      response.should_receive(:deserialise_using).with(Components::Translators::Xml)
+      response.should_receive(:deserialise_using).with(Components::Translators::Xml,{})
 
       response.deserialise
     end
-    
-    it "should simply return itself when asked to follow (null object behaviour - see MovedPermanently for more context)" do
+
+    it "should know how to deserialise a json response" do
+      http_response = mock('response')
+      http_response.stub!(:code).and_return('200')
+      http_response.should_receive(:body).and_return("{ \"menu\": \"File\",
+      \"commands\": [ { \"title\": \"New\", \"action\":\"CreateDoc\" }, {
+      \"title\": \"Open\", \"action\": \"OpenDoc\" }, { \"title\": \"Close\",
+      \"action\": \"CloseDoc\" } ] }")
+      http_response.should_receive(:content_type).and_return('application/json')
+
+      response = Native::Response.new(http_response)
+      
+      response.deserialise.should == { "commands"=>[{"title"=>"New",
+        "action"=>"CreateDoc"},
+        {"title"=>"Open","action"=>"OpenDoc"},{"title"=>"Close",
+          "action"=>"CloseDoc"}], "menu"=>"File"}
+      
+    end
+
+   it "should simply return itself when asked to follow (null object behaviour - see MovedPermanently for more context)" do
       http_response = mock('response')
       http_response.stub!(:code).and_return('422')
       
