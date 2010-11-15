@@ -32,10 +32,10 @@ module Wrest::Components::Translators
     end
     
     backend = ['Nokogiri','REXML']
-    backend.each { |e| 
+    backend << 'LibXML' unless (RUBY_PLATFORM =~ /java/ || (Object.const_defined?('RUBY_ENGINE') && RUBY_ENGINE =~ /rbx/))
+    backend.each do |e| 
       it "should be able to pull out desired elements from an xml response based on xpath and return an array of matching nodes" do
         ActiveSupport::XmlMini.backend = e
-        p ActiveSupport::XmlMini.backend
         
         http_response = mock('Http Response')
         http_response.should_receive(:body).and_return("<Person><Personal><Name><FirstName>Nikhil</FirstName></Name></Personal><Address><Name>Bangalore</Name></Address></Person>")
@@ -45,6 +45,6 @@ module Wrest::Components::Translators
         res_arr.each { |a| result+= a.to_s.gsub(/[\n]+/, "").gsub(/\s/, '')}
         result.should == "<Name><FirstName>Nikhil</FirstName></Name><Name>Bangalore</Name>" 
       end
-    }
     end
+  end
 end
