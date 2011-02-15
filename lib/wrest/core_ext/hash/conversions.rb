@@ -38,6 +38,7 @@ module Wrest
             self.each{|tuple| mutated_hash.store(*mutator.mutate(tuple))}
           mutated_hash
         end
+
       end
     end
   end

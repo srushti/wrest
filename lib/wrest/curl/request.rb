@@ -14,7 +14,7 @@ module Wrest
     # or Wrest::Curl::Get etc. instead.
     class Request
       attr_reader :http_request, :uri, :body, :headers, :username, :password, :follow_redirects,
-      :follow_redirects_limit, :timeout, :connection, :parameters, :auth_type
+      :follow_redirects_limit, :timeout, :connection, :parameters, :auth_type, :multipart, :file_name
       # Valid tuples for the options are:
       #   :username => String, defaults to nil
       #   :password => String, defaults to nil
@@ -38,6 +38,8 @@ module Wrest
         @body = body
 
         @options = options.clone
+        @multipart = @options[:multipart]
+        @file_name = @options[:file]
         @auth_type = @options[:auth_type] || :basic
         @username = @options[:username]
         @password = @options[:password]
@@ -49,22 +51,25 @@ module Wrest
 
         @http_request = Patron::Request.new
         @http_request.action = http_verb
-        @http_request.upload_data = body
+
         @http_request.headers = headers
         @http_request.username = username
         @http_request.password = password
+        @http_request.multipart = multipart
+        @http_request.upload_data = body 
+        @http_request.file_name = file_name
         @http_request.auth_type = auth_type
         @http_request.url = parameters.empty? ? uri.to_s : "#{uri.to_s}?#{parameters.to_query}"
         @http_request.max_redirects = follow_redirects_limit if follow_redirects
         @http_request.timeout = @timeout
       end
 
-      # Makes a request and returns a Wrest::Http::Response.
+      # Makes a request and returns a Wrest::Native::Response.
       # Data about the request is and logged to Wrest.logger
       # The log entry contains the following information:
       #
-      #   --> indicates a request
-      #   <-- indicates a response
+      #   <- indicates a request
+      #   -> indicates a response
       #
       # The type of request is mentioned in caps, followed by a hash
       # uniquely uniquely identifying a particular request/response pair.
@@ -84,9 +89,9 @@ module Wrest
 
         prefix = "#{http_request.action.to_s.upcase} #{http_request.hash} #{connection.hash}"
 
-        Wrest.logger.debug "--> (#{prefix}) #{http_request.url}"
+        Wrest.logger.debug "<- (#{prefix}) #{http_request.url}"
         time = Benchmark.realtime { response =  Wrest::Curl::Response.new(connection.handle_request(http_request))}
-        Wrest.logger.debug "<-- (#{prefix}) %s (%d bytes %.2fs)" % [response.message, response.body ? response.body.length : 0, time]
+        Wrest.logger.debug "-> (#{prefix}) %s (%d bytes %.2fs)" % [response.message, response.body ? response.body.length : 0, time]
 
         response
       rescue Patron::TimeoutError => e

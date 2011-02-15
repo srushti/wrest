@@ -18,7 +18,6 @@ require 'base64'
 require 'logger'
 require 'benchmark'
 require 'active_support'
-require 'active_support/json'
 require 'active_support/core_ext/string'
 require 'active_support/core_ext/hash'
 require 'active_support/core_ext/module'
@@ -37,13 +36,17 @@ module Wrest
     @logger
   end
 
+  def self.enable_evented_requests!
+    require "#{Wrest::Root}/wrest/event_machine_backend"
+  end
+
   # Switch Wrest to using Net::HTTP.
-  def self.use_native
+  def self.use_native!
     silence_warnings{ Wrest.const_set('Http', Wrest::Native) }
   end
 
   # Switch Wrest to using libcurl.
-  def self.use_curl
+  def self.use_curl!
     require "#{Wrest::Root}/wrest/curl"
     silence_warnings{ Wrest.const_set('Http', Wrest::Curl) }
   end
@@ -52,44 +55,28 @@ end
 Wrest.logger = ActiveSupport::BufferedLogger.new(STDOUT)
 Wrest.logger.level = Logger::DEBUG
 
-begin
-  gem 'libxml-ruby', '>= 1.1.3'
-  ActiveSupport::XmlMini.backend='LibXML'
-rescue Gem::LoadError
-  begin
-    gem 'nokogiri', '~> 1.4.3.1'
-    ActiveSupport::XmlMini.backend='Nokogiri'
-  rescue Gem::LoadError
-    unless RUBY_PLATFORM =~ /java/
-      Wrest.logger.debug "Warning: LibXML >= 1.1.3 not found, attempting to use Nokogiri. To install LibXML run `(sudo) gem install libxml-ruby` (libxml-ruby is not available on JRuby)"
-    end
-    Wrest.logger.debug "Warning: Nokogiri >= 1.3.3 not found, falling back to #{ActiveSupport::XmlMini.backend} (which is probably significantly slower). To install Nokogiri run `(sudo) (jruby -S) gem install nokogiri`"
-    if RUBY_PLATFORM =~ /java/
-      begin
-        gem 'jrexml', '~> 0.5.3'
-        require 'jrexml'
-        Wrest.logger.debug "Detected JRuby, JREXML loaded."
-      rescue Gem::LoadError
-        Wrest.logger.debug "Warning: Detected JRuby, but failed to load JREXML. JREXML offers *some* performance improvement when using REXML on JRuby. To install JREXML run `(sudo) jruby -S gem install jrexml`"
-      end
-    end
-  end
-end
-
 RUBY_PLATFORM =~ /java/ ? gem('json-jruby', '>= 1.4.2') : gem('json', '>= 1.4.2')
 ActiveSupport::JSON.backend = "JSONGem"
 
-
-
 require "#{Wrest::Root}/wrest/core_ext/string"
+require "#{Wrest::Root}/wrest/hash_with_case_insensitive_access"
 
 # Load XmlMini Extensions
 require "#{Wrest::Root}/wrest/xml_mini"
 
 # Load Wrest Core
 require "#{Wrest::Root}/wrest/version"
+require "#{Wrest::Root}/wrest/cache_proxy"
 require "#{Wrest::Root}/wrest/http_shared"
+require "#{Wrest::Root}/wrest/http_codes"
+require "#{Wrest::Root}/wrest/callback"
 require "#{Wrest::Root}/wrest/native"
+
+require "#{Wrest::Root}/wrest/async_request"
+require "#{Wrest::Root}/wrest/async_request/thread_backend"
+Wrest::AsyncRequest.default_to_threads!
+
+require "#{Wrest::Root}/wrest/caching"
 
 # Load Wrest Wrappers
 require "#{Wrest::Root}/wrest/uri"

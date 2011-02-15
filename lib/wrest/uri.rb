@@ -22,11 +22,11 @@ module Wrest #:nodoc:
   #
   # You can find examples that use real APIs (like delicious) under the wrest/examples directory.
   class Uri
-    attr_reader :uri, :username, :password, :uri_string, :uri_path, :query
+    attr_reader :uri, :username, :password, :uri_string, :uri_path, :query 
         
-    # See Wrest::Http::Request for the available options and their default values.
+    # See Wrest::Native::Request for the available options and their default values.
     def initialize(uri_string, options = {})
-        @options = options
+        @options = options.clone
         @uri_string = uri_string.to_s
         @uri = URI.parse(@uri_string)
         uri_scheme = URI.split(@uri_string)
@@ -35,11 +35,12 @@ module Wrest #:nodoc:
         @query = uri_scheme[-2] || ''
         @username = (@options[:username] ||= @uri.user)
         @password = (@options[:password] ||= @uri.password)
+        @options[:callback] = Callback.new(@options[:callback]) if @options[:callback]
     end 
     
     def to_template(pattern)
       template_pattern = URI.join(uri_string,pattern).to_s
-      UriTemplate.new(template_pattern)
+      UriTemplate.new(template_pattern, @options)
     end
         
     # Build a new Wrest::Uri by appending _path_ to
@@ -88,28 +89,105 @@ module Wrest #:nodoc:
     end
     
     # Make a GET request to this URI. This is a convenience API
-    # that creates a Wrest::Http::Get, executes it and returns a Wrest::Http::Response.
+    # that creates a Wrest::Native::Get, executes it and returns a Wrest::Native::Response.
     #
     # Remember to escape all parameter strings if necessary, using URI.escape
-    def get(parameters = {}, headers = {})
-      Http::Get.new(self, parameters, headers, @options).invoke
+    def get(parameters = {}, headers = {}, &block)
+      Http::Get.new(self, parameters, headers, block ? @options.merge(:callback_block => block) : @options).invoke
+    end
+
+    # Returns a Uri object that uses threads to perform asynchronous requests.
+    def using_threads
+      options = @options.clone
+      options[:asynchronous_backend] = Wrest::AsyncRequest::ThreadBackend.new
+      Uri.new(uri_string, options)
+    end
+
+    # Returns a Uri object that uses eventmachine to perform asynchronous requests.
+    def using_em
+      options = @options.clone
+      Wrest::AsyncRequest.enable_em
+      options[:asynchronous_backend] = Wrest::AsyncRequest::EventMachineBackend.new
+      Uri.new(uri_string, options)
+    end
+
+    # Returns a Uri object that uses hash for caching responses.
+    def using_hash
+      options = @options.clone
+      options[:cache_store] = Hash.new
+      Uri.new(uri_string, options)
+    end
+
+    # Returns a Uri object that uses memcached for caching responses.
+    def using_memcached
+      options = @options.clone
+      Wrest::Caching.enable_memcached
+      options[:cache_store] = Wrest::Caching::Memcached.new
+      Uri.new(uri_string, options)
+    end
+
+    def disable_cache
+      options = @options.clone
+      Wrest::Caching.enable_memcached
+      options[:disable_cache] = true 
+      Uri.new(uri_string, options)
+    end
+
+    # Make a GET request to this URI. This is a convenience API
+    # that creates a Wrest::Native::Get.
+    # 
+    # Remember to escape all parameter strings if necessary, using URI.escape
+    #
+    # Note: get_async does not return a response and the response should be accessed through callbacks.
+    # This implementation of asynchronous get is very naive and should not be used in production.
+    # Stable implementation of asynchronous requests involving thread pools would be out soon.
+    def get_async(parameters = {}, headers = {}, &block)
+      (@options[:asynchronous_backend] || Wrest::AsyncRequest.default_backend).execute(Http::Get.new(self, parameters, headers, block ? @options.merge(:callback_block => block) : @options))
+      nil
     end
 
     # Make a PUT request to this URI. This is a convenience API
-    # that creates a Wrest::Http::Put, executes it and returns a Wrest::Http::Response.
+    # that creates a Wrest::Native::Put, executes it and returns a Wrest::Native::Response.
     #
     # Remember to escape all parameter strings if necessary, using URI.escape
-    def put(body = '', headers = {}, parameters = {})
-      Http::Put.new(self, body.to_s, headers, parameters, @options).invoke
+    def put(body = '', headers = {}, parameters = {}, &block)
+      Http::Put.new(self, body.to_s, headers, parameters, block ? @options.merge(:callback_block => block) : @options).invoke
+    end
+
+    # Make a PUT request to this URI. This is a convenience API
+    # that creates a Wrest::Native::Put.
+    #
+    # Remember to escape all parameter strings if necessary, using URI.escape
+    #
+    # Note: put_async does not return a response and the response should be accessed through callbacks.
+    # This implementation of asynchronous put is very naive and should not be used in production.
+    # Stable implementation of asynchronous requests involving thread pools would be out soon.
+    def put_async(body = '', headers = {}, parameters = {}, &block)
+      (@options[:asynchronous_backend] || Wrest::AsyncRequest.default_backend).execute(Http::Put.new(self, body.to_s, headers, parameters, block ? @options.merge(:callback_block => block) : @options))
+      nil
     end
 
     # Makes a POST request to this URI. This is a convenience API
-    # that creates a Wrest::Http::Post, executes it and returns a Wrest::Http::Response.
+    # that creates a Wrest::Native::Post, executes it and returns a Wrest::Native::Response.
     # Note that sending an empty body will blow up if you're using libcurl.
     #
     # Remember to escape all parameter strings if necessary, using URI.escape
-    def post(body = '', headers = {}, parameters = {})
-      Http::Post.new(self, body.to_s, headers, parameters, @options).invoke
+    def post(body = '', headers = {}, parameters = {}, &block)
+      Http::Post.new(self, body.to_s, headers, parameters, block ? @options.merge(:callback_block => block) : @options).invoke
+    end
+
+    # Makes a POST request to this URI. This is a convenience API
+    # that creates a Wrest::Native::Post.
+    # Note that sending an empty body will blow up if you're using libcurl.
+    #
+    # Remember to escape all parameter strings if necessary, using URI.escape
+    #
+    # Note: post_async does not return a response and the response should be accessed through callbacks.
+    # This implementation of asynchronous post is very naive and should not be used in production.
+    # Stable implementation of asynchronous requests involving thread pools would be out soon.
+    def post_async(body = '', headers = {}, parameters = {}, &block)
+      (@options[:asynchronous_backend] || Wrest::AsyncRequest.default_backend).execute(Http::Post.new(self, body.to_s, headers, parameters, block ? @options.merge(:callback_block => block) : @options))
+      nil
     end
     
     # Makes a POST request to this URI. This is a convenience API
@@ -119,22 +197,53 @@ module Wrest #:nodoc:
     # Form encoding involves munging the parameters into a string and placing them
     # in the body, as well as setting the Content-Type header to
     # application/x-www-form-urlencoded
-    def post_form(parameters = {}, headers = {})
+    def post_form(parameters = {}, headers = {}, &block)
       headers = headers.merge(Wrest::H::ContentType => Wrest::T::FormEncoded)
       body = parameters.to_query
-      Http::Post.new(self, body, headers, {}, @options).invoke
+      Http::Post.new(self, body, headers, {}, block ? @options.merge(:callback_block => block) : @options).invoke
+    end
+
+    # Makes a POST request to this URI. This is a convenience API
+    # that mimics a form being posted; some allegly RESTful APIs like FCBK require 
+    # this.
+    #
+    # Form encoding involves munging the parameters into a string and placing them
+    # in the body, as well as setting the Content-Type header to
+    # application/x-www-form-urlencoded
+    #
+    # Note: post_form_async does not return a response and the response should be accessed through callbacks.
+    # This implementation of asynchronous post_form is very naive and should not be used in production.
+    # Stable implementation of asynchronous requests involving thread pools would be out soon.
+    def post_form_async(parameters = {}, headers = {}, &block)
+      headers = headers.merge(Wrest::H::ContentType => Wrest::T::FormEncoded)
+      body = parameters.to_query
+      (@options[:asynchronous_backend] || Wrest::AsyncRequest.default_backend).execute(Http::Post.new(self, body, headers, {}, block ? @options.merge(:callback_block => block) : @options))
+      nil
     end
 
     # Makes a DELETE request to this URI. This is a convenience API
-    # that creates a Wrest::Http::Delete, executes it and returns a Wrest::Http::Response.
+    # that creates a Wrest::Native::Delete, executes it and returns a Wrest::Native::Response.
     #
     # Remember to escape all parameter strings if necessary, using URI.escape
-    def delete(parameters = {}, headers = {})
-      Http::Delete.new(self, parameters, headers, @options).invoke
+    def delete(parameters = {}, headers = {}, &block)
+      Http::Delete.new(self, parameters, headers, block ? @options.merge(:callback_block => block) : @options).invoke
+    end
+
+    # Makes a DELETE request to this URI. This is a convenience API
+    # that creates a Wrest::Native::Delete.
+    #
+    # Remember to escape all parameter strings if necessary, using URI.escape
+    #
+    # Note: delete_async does not return a response and the response should be accessed through callbacks.
+    # This implementation of asynchronous delete is very naive and should not be used in production.
+    # Stable implementation of asynchronous requests involving thread pools would be out soon.
+    def delete_async(parameters = {}, headers = {}, &block)
+      (@options[:asynchronous_backend] || Wrest::AsyncRequest.default_backend).execute(Http::Delete.new(self, parameters, headers, block ? @options.merge(:callback_block => block) : @options))
+      nil
     end
 
     # Makes an OPTIONS request to this URI. This is a convenience API
-    # that creates a Wrest::Http::Options, executes it and returns the Wrest::Http::Response.
+    # that creates a Wrest::Native::Options, executes it and returns the Wrest::Native::Response.
     def options
       Http::Options.new(self, @options).invoke
     end

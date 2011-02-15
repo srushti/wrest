@@ -1,10 +1,12 @@
 .#*
 \#*\#
+Gemfile.lock
 coverage
 rdoc
 doc
 pkg
 tmp
+nbproject
 spec/wrest/meh_spec.rb
 .DS_Store
 *.rbc
@@ -18,3 +20,6 @@ TAGS
 *.swp
 .bundle
 .redcar
+.rvmrc
+.idea
+spec_all_rubies.sh

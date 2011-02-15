@@ -10,17 +10,23 @@
 # Note that some optional libraries/gems that the build (not Wrest itself) uses may not be available on all implementations of Ruby.
 puts "Building on Ruby #{RUBY_VERSION}, #{RUBY_RELEASE_DATE}, #{RUBY_PLATFORM}"
 
+require 'bundler'
+Bundler::GemHelper.install_tasks
+
 if Object.const_defined?('RAILS_ROOT') || Object.const_defined?('Rails') 
   require File.dirname(__FILE__) + '/../../../config/environment'
 else
   require 'rubygems'
-  gem 'rspec', '>= 2.0.0.beta.19'
   require 'rake'
   require 'rspec'
   require 'rspec/core/rake_task'
   
   begin
     require 'metric_fu'
+    MetricFu::Configuration.run do |config|
+      config.rcov[:test_files] = ['spec/**/*_spec.rb']
+      config.rcov[:rcov_opts] << "-Ispec" # Needed to find spec_helper
+    end
   rescue LoadError
     puts 'metric_fu is not available. Install it with: gem install jscruggs-metric_fu -s http://gems.github.com'
   end

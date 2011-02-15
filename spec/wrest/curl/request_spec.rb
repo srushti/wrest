@@ -1,10 +1,11 @@
 require "spec_helper"
 
+
 unless RUBY_PLATFORM =~ /java/
   module Wrest
     describe Curl::Request do
       before :all do
-        Wrest.use_curl
+        Wrest.use_curl!
       end
 
       it "should raise an exception if an options is invoked" do
@@ -22,11 +23,10 @@ unless RUBY_PLATFORM =~ /java/
             Wrest::Curl::Request.new('http://localhost:3000/two_seconds'.to_uri, :get, {}, '', {}, :timeout => 1).invoke 
           }.should raise_error(Wrest::Exceptions::Timeout)
         end
-
       end
 
       after :all do
-        Wrest.use_native
+        Wrest.use_native!
       end
     end
   end
